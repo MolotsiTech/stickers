@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Comment stickers</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stickers">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0E6B4A">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF3E2;--ink:#1B2A1F;--mute:#56685B;--card:#FFFFFF;--line:#C9D5BA;--acc:#0E6B4A;--accink:#FFFFFF;--pop:#E8336D;--c1:#FFFFFF;--c2:#DDE4CF;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111912;--ink:#E6EFE4;--mute:#9AAE9E;--card:#1A241C;--line:#2E3E32;--acc:#3DDC97;--accink:#0B1F14;--pop:#FF6B9A;--c1:#2A352D;--c2:#212B24;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111912;--ink:#E6EFE4;--mute:#9AAE9E;--card:#1A241C;--line:#2E3E32;--acc:#3DDC97;--accink:#0B1F14;--pop:#FF6B9A;--c1:#2A352D;--c2:#212B24;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+h1{font-weight:800;font-size:clamp(28px,6vw,44px);line-height:1.05;margin:0 0 8px;letter-spacing:-.02em}
+.lede{color:var(--mute);margin:0 0 24px;max-width:56ch}
+.grid{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:800px){.grid{grid-template-columns:minmax(0,512px) minmax(0,1fr);align-items:start}}
+.stage{position:relative}
+canvas{display:block;width:100%;aspect-ratio:1;border-radius:20px;border:2px solid var(--line);touch-action:none;cursor:grab;
+background:repeating-conic-gradient(var(--c1) 0 25%,var(--c2) 0 50%) 0 0/24px 24px}
+canvas.pick{cursor:crosshair;border-color:var(--pop)}
+.drop{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;border-radius:20px;border:2px dashed var(--acc);color:var(--ink);cursor:pointer;background:color-mix(in srgb,var(--bg) 70%,transparent)}
+.drop.hide{display:none}
+.drop b{display:block;font-size:20px;font-weight:800;margin-bottom:4px}
+.drop span{color:var(--mute);font-size:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:18px}
+label{display:grid;gap:6px;font-weight:600;font-size:14px}
+label small{font-weight:400;color:var(--mute)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+button,.btn{font:inherit;font-weight:600;border-radius:999px;border:2px solid var(--acc);background:transparent;color:var(--ink);padding:10px 18px;cursor:pointer;text-align:center}
+button.main{background:var(--acc);color:var(--accink);font-size:17px;padding:13px 20px}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible,summary:focus-visible,.drop:focus-visible{outline:3px solid var(--pop);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 auto}
+#status{min-height:1.5em;font-size:14px;color:var(--mute);margin:0}
+#status.err{color:var(--pop)}
+details{color:var(--mute);font-size:14px}
+summary{cursor:pointer;font-weight:600;color:var(--ink)}
+details ol{margin:10px 0 0;padding-left:20px}
+details li{margin-bottom:6px}
+.tabs{display:flex;gap:8px}
+.tabs button{flex:1;padding:10px 8px}
+.tabs button[aria-pressed="true"]{background:var(--acc);color:var(--accink)}
+textarea,input[type=text]{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{min-height:110px;resize:vertical}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>Comment sticker → WhatsApp sticker</h1>
+<p class="lede">Paste a TikTok comment (or upload a screenshot of one) and save a 512×512 WebP under 100 KB, the format WhatsApp stickers use.</p>
+<div class="grid">
+  <div class="stage">
+    <canvas id="view" width="512" height="512" aria-label="Sticker preview"></canvas>
+    <div class="drop" id="drop" tabindex="0" role="button">
+      <div><b>Drop a screenshot here</b><span>or tap to choose an image. You can also paste one.</span></div>
+    </div>
+    <input type="file" id="file" accept="image/*" class="hidden">
+  </div>
+  <div class="panel">
+    <div class="tabs" role="group" aria-label="Source"><button id="tabtext" aria-pressed="true">From comment text</button><button id="tabimg" aria-pressed="false">From screenshot</button></div>
+    <div id="textfields" style="display:grid;gap:14px">
+      <label>Username <small>Long-press the comment to copy its text, then paste it below.</small><input type="text" id="tuser" placeholder="username" autocomplete="off" autocapitalize="off"></label>
+      <label>Comment<textarea id="ttext" placeholder="Paste the comment here"></textarea></label>
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="tdark" style="accent-color:var(--acc)"> Dark bubble</label>
+    </div>
+    <label>Size <small>Drag the preview to move the image.</small>
+      <input type="range" id="zoom" min="30" max="400" value="100" disabled></label>
+    <label>Corner rounding <small>Matches the comment bubble’s shape.</small>
+      <input type="range" id="round" min="0" max="120" value="0" disabled></label>
+    <div>
+      <div class="row">
+        <button id="pickbtn" disabled>Remove a background color</button>
+        <button id="keepbtn" class="hidden">Keep background</button>
+      </div>
+      <label id="tolwrap" class="hidden" style="margin-top:12px">Color tolerance <small>Raise it if edges still show the old color.</small>
+        <input type="range" id="tol" min="5" max="90" value="35"></label>
+    </div>
+    <label>White outline <small>The classic sticker border.</small>
+      <input type="range" id="outline" min="0" max="14" value="0" disabled></label>
+    <div class="row">
+      <button id="savepng" class="main" disabled>Share or save sticker</button>
+      <button id="copyimg" disabled>Copy image</button>
+      <button id="savewebp" disabled>Save WebP</button>
+      
+    </div>
+    <p id="status" role="status"></p>
+    <details>
+      <summary>Add it to WhatsApp</summary>
+      <ol>
+        <li><b>Android:</b> open a sticker-maker app such as Sticker Maker, create a pack, import the saved WebP, and choose Add to WhatsApp.</li>
+        <li><b>iPhone:</b> save the image to Photos, open a chat, tap the sticker icon, then the + button, and pick the image. Exact steps vary by WhatsApp version.</li>
+      </ol>
+    </details>
+  </div>
+</div>
+</main>
+<script>
+const S=512,$=id=>document.getElementById(id);
+const view=$('view'),vctx=view.getContext('2d');
+const mk=()=>{const c=document.createElement('canvas');c.width=c.height=S;return c};
+const base=mk(),bctx=base.getContext('2d',{willReadFrequently:true});
+const proc=mk(),pctx=proc.getContext('2d',{willReadFrequently:true});
+const sil=mk(),sctx=sil.getContext('2d');
+let img=null,z0=1,zoom=1,ox=0,oy=0,pick=null,seed=[0,0],picking=false,tol=35,outline=0,round=0;
+const ctl=['zoom','round','outline','pickbtn','savewebp','savepng','copyimg'];
+
+function say(t,err){const s=$('status');s.textContent=t;s.className=err?'err':''}
+function loadFile(f){if(mode!=='img')setMode('img');
+  if(!f||!f.type.startsWith('image/')){say('That file isn’t an image. Try a PNG or JPG screenshot.',1);return}
+  const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{img=im;pick=null;picking=false;
+    z0=Math.min(S/im.width,S/im.height)*.94;zoom=z0;ox=(S-im.width*zoom)/2;oy=(S-im.height*zoom)/2;
+    $('zoom').value=100;$('round').value=0;$('outline').value=0;round=0;outline=0;
+    ctl.forEach(i=>$(i).disabled=false);$('drop').classList.add('hide');syncBg();say('');render()};
+    im.onerror=()=>say('Couldn’t read that image.',1);im.src=r.result};
+  r.readAsDataURL(f)}
+function syncBg(){
+  $('pickbtn').classList.toggle('hidden',!!pick);$('keepbtn').classList.toggle('hidden',!pick);
+  $('tolwrap').classList.toggle('hidden',!pick);
+  $('pickbtn').textContent=picking?'Now tap the color to remove':'Remove a background color';
+  view.classList.toggle('pick',picking)}
+
+function removeBg(){
+  const d=pctx.getImageData(0,0,S,S),p=d.data,[r,g,b]=pick,lim=tol*tol*3,seen=new Uint8Array(S*S),st=[];
+  const push=i=>{if(seen[i])return;const k=i*4;
+    if(p[k+3]>=8){const a=p[k]-r,c=p[k+1]-g,e=p[k+2]-b;if(a*a+c*c+e*e>lim)return}
+    seen[i]=1;st.push(i)};
+  for(let x=0;x<S;x++){push(x);push((S-1)*S+x)}
+  for(let y=0;y<S;y++){push(y*S);push(y*S+S-1)}
+  push(seed[1]*S+seed[0]);
+  while(st.length){const i=st.pop(),x=i%S,y=(i-x)/S;p[i*4+3]=0;
+    if(x>0)push(i-1);if(x<S-1)push(i+1);if(y>0)push(i-S);if(y<S-1)push(i+S)}
+  pctx.putImageData(d,0,0)}
+
+function render(){
+  vctx.clearRect(0,0,S,S);if(!img)return;
+  const w=img.width*zoom,h=img.height*zoom;
+  bctx.clearRect(0,0,S,S);bctx.save();
+  if(round>0&&bctx.roundRect){bctx.beginPath();bctx.roundRect(ox,oy,w,h,Math.min(round*zoom/z0,w/2,h/2));bctx.clip()}
+  bctx.drawImage(img,ox,oy,w,h);bctx.restore();
+  pctx.clearRect(0,0,S,S);pctx.drawImage(base,0,0);
+  if(pick)removeBg();
+  if(outline>0){
+    sctx.globalCompositeOperation='source-over';sctx.clearRect(0,0,S,S);sctx.drawImage(proc,0,0);
+    sctx.globalCompositeOperation='source-in';sctx.fillStyle='#fff';sctx.fillRect(0,0,S,S);
+    for(let i=0;i<36;i++){const a=i/36*Math.PI*2;vctx.drawImage(sil,Math.cos(a)*outline,Math.sin(a)*outline)}}
+  vctx.drawImage(proc,0,0)}
+
+// input wiring
+$('drop').onclick=()=>$('file').click();
+$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+$('file').onchange=e=>loadFile(e.target.files[0]);
+document.addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])][0];if(f)loadFile(f)});
+['dragover','drop'].forEach(n=>document.addEventListener(n,e=>{e.preventDefault();if(n==='drop')loadFile(e.dataTransfer.files[0])}));
+$('zoom').oninput=e=>{const nz=z0*e.target.value/100,k=nz/zoom;ox=S/2-(S/2-ox)*k;oy=S/2-(S/2-oy)*k;zoom=nz;render()};
+$('round').oninput=e=>{round=+e.target.value;render()};
+$('outline').oninput=e=>{outline=+e.target.value;render()};
+$('tol').oninput=e=>{tol=+e.target.value;render()};
+$('pickbtn').onclick=()=>{picking=!picking;syncBg()};
+$('keepbtn').onclick=()=>{pick=null;picking=false;syncBg();render()};
+
+// drag to move, or tap to pick a color
+let drag=null;
+view.onpointerdown=e=>{if(!img)return;view.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,moved:false}};
+view.onpointermove=e=>{if(!drag||picking)return;const k=S/view.getBoundingClientRect().width;
+  ox+=(e.clientX-drag.x)*k;oy+=(e.clientY-drag.y)*k;drag.x=e.clientX;drag.y=e.clientY;drag.moved=true;render()};
+view.onpointerup=e=>{
+  if(drag&&picking){const r=view.getBoundingClientRect(),x=Math.min(S-1,Math.max(0,Math.floor((e.clientX-r.left)*S/r.width))),y=Math.min(S-1,Math.max(0,Math.floor((e.clientY-r.top)*S/r.height)));
+    const px=bctx.getImageData(x,y,1,1).data;
+    if(px[3]<8){say('That spot is already transparent. Tap a colored area.',1)}
+    else{pick=[px[0],px[1],px[2]];seed=[x,y];picking=false;say('');syncBg();render()}}
+  drag=null};
+view.onwheel=e=>{if(!img)return;e.preventDefault();const z=$('zoom');z.value=Math.min(400,Math.max(30,+z.value*(e.deltaY<0?1.06:.94)));z.oninput({target:z})};
+
+// export
+const canWebp=view.toDataURL('image/webp').startsWith('data:image/webp');
+if(!canWebp)$('savewebp').classList.add('hidden');
+const blobOf=(t,q)=>new Promise(r=>view.toBlob(r,t,q));
+async function webpBlob(){
+  let b;for(let q=.95;q>=.3;q-=.1){b=await blobOf('image/webp',q);if(!b||b.type!=='image/webp'||b.size<=100000)break}
+  return b}
+async function offer(name,blob){
+  const f=new File([blob],name,{type:blob.type});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});say('');return}}
+  catch(e){if(e&&e.name==='AbortError'){say('');return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();say('Saved '+name+'.')}
+$('savepng').onclick=async()=>{const b=await blobOf('image/png');if(b)offer('sticker.png',b)};
+$('copyimg').onclick=async()=>{
+  try{const b=await blobOf('image/png');await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);say('Copied. Paste it wherever you need it.')}
+  catch(e){say('Copying isn’t available here. Use Share or save instead.',1)}};
+$('savewebp').onclick=async()=>{
+  say('Preparing…');const b=await webpBlob();
+  if(!b||b.type!=='image/webp'){say('This browser can’t create WebP files. Use the PNG instead.',1);return}
+  if(b.size>100000){say('Even at low quality it’s '+(b.size/1024).toFixed(0)+' KB, over WhatsApp’s 100 KB limit. Try removing the background or shrinking the image.',1);return}
+  say('Sticker is '+(b.size/1024).toFixed(0)+' KB, within WhatsApp’s limit.');offer('sticker.webp',b)};
+
+// text-to-bubble mode
+let mode='text',bt;
+function useImage(im){img=im;pick=null;picking=false;z0=Math.min(S/im.width,S/im.height)*.94;zoom=z0;ox=(S-im.width*zoom)/2;oy=(S-im.height*zoom)/2;
+  $('zoom').value=100;ctl.forEach(i=>$(i).disabled=false);syncBg();render()}
+function bubble(){
+  const user=$('tuser').value.trim().replace(/^@/,''),text=$('ttext').value.trim(),dark=$('tdark').checked;
+  if(!text){img=null;ctl.forEach(i=>$(i).disabled=true);render();say('Paste a comment to see your sticker.');return}
+  say('');
+  const W=900,P=56,maxW=W-2*P,lh=70,head=46,F='system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  const m=document.createElement('canvas').getContext('2d');m.font='600 54px '+F;
+  let lines=[];
+  text.split('\n').forEach(para=>{
+    const toks=(para.match(/\S+\s*/g)||['']).flatMap(t=>m.measureText(t).width>maxW?[...t]:[t]);
+    let cur='';for(const t of toks){if(cur&&m.measureText((cur+t).trimEnd()).width>maxW){lines.push(cur.trimEnd());cur=t}else cur+=t}
+    lines.push(cur.trimEnd())});
+  if(lines.length>10){lines=lines.slice(0,10);lines[9]=lines[9].slice(0,-1)+'…'}
+  const H=Math.ceil(P*1.8+head+22+lines.length*lh),c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  g.fillStyle=dark?'#1B1D27':'#FFFFFF';g.beginPath();if(g.roundRect)g.roundRect(0,0,W,H,60);else g.rect(0,0,W,H);g.fill();
+  g.textBaseline='top';g.font='500 34px '+F;g.fillStyle=dark?'#A3A6B3':'#7A7D87';
+  let hd=user?'Reply to '+user+'’s comment':'Reply to comment';
+  while(g.measureText(hd).width>maxW&&hd.length>3)hd=hd.slice(0,-2)+'…';
+  g.fillText(hd,P,P);
+  g.font='600 54px '+F;g.fillStyle=dark?'#FFFFFF':'#161823';
+  lines.forEach((l,i)=>g.fillText(l,P,P+head+22+i*lh));
+  const im=new Image();im.onload=()=>useImage(im);im.src=c.toDataURL('image/png')}
+function setMode(m){
+  mode=m;img=null;pick=null;picking=false;
+  $('tabtext').setAttribute('aria-pressed',m==='text');$('tabimg').setAttribute('aria-pressed',m==='img');
+  $('textfields').classList.toggle('hidden',m!=='text');
+  [$('round').parentElement,$('pickbtn').parentElement.parentElement].forEach(e=>e.classList.toggle('hidden',m==='text'));
+  $('drop').classList.toggle('hide',m==='text');
+  ctl.forEach(i=>$(i).disabled=true);syncBg();render();say('');
+  if(m==='text')bubble()}
+$('tabtext').onclick=()=>{if(mode!=='text')setMode('text')};
+$('tabimg').onclick=()=>{if(mode!=='img')setMode('img')};
+['tuser','ttext','tdark'].forEach(id=>$(id).addEventListener('input',()=>{clearTimeout(bt);bt=setTimeout(bubble,150)}));
+setMode('text');
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
